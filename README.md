@@ -33,7 +33,44 @@ This will install the binary to your Cargo bin directory (usually `~/.cargo/bin/
 
 ### Option 3: Download Pre-built Binary
 
-Download the latest release from the [GitHub releases page](https://github.com/your-username/sqlc-gen-rust/releases) and place it in your PATH.
+Download the latest release from the [GitHub releases page](https://github.com/rezi-labs/sqlr/releases) and place it in your PATH.
+
+#### Available Platforms
+
+- **Linux x86_64**: `sqlc-gen-rust-x86_64-unknown-linux-gnu.tar.gz`
+- **Linux x86_64 (musl)**: `sqlc-gen-rust-x86_64-unknown-linux-musl.tar.gz` 
+- **Linux ARM64**: `sqlc-gen-rust-aarch64-unknown-linux-gnu.tar.gz`
+- **macOS x86_64**: `sqlc-gen-rust-x86_64-apple-darwin.tar.gz`
+- **macOS ARM64 (Apple Silicon)**: `sqlc-gen-rust-aarch64-apple-darwin.tar.gz`
+- **Windows x86_64**: `sqlc-gen-rust-x86_64-pc-windows-msvc.exe.zip`
+
+#### Installation Steps
+
+1. Download the appropriate binary for your platform from the releases page
+2. Extract the archive (for Unix systems):
+   ```bash
+   tar -xzf sqlc-gen-rust-*.tar.gz
+   ```
+   Or unzip (for Windows):
+   ```cmd
+   unzip sqlc-gen-rust-*.zip
+   ```
+3. Move the binary to a directory in your PATH:
+   ```bash
+   # Unix systems
+   sudo mv sqlc-gen-rust /usr/local/bin/
+   
+   # Or for user-local installation
+   mv sqlc-gen-rust ~/.local/bin/
+   ```
+   ```cmd
+   # Windows - move to a directory in your PATH
+   move sqlc-gen-rust.exe C:\Users\%USERNAME%\bin\
+   ```
+4. Verify installation:
+   ```bash
+   sqlc-gen-rust --version
+   ```
 
 ## Quick Start Tutorial
 
