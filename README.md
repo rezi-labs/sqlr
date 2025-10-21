@@ -1,0 +1,2 @@
+# sqlr
+sqlc-plugin
