@@ -1,6 +1,6 @@
 [package]
 name = "sqlc-gen-rust"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 description = "sqlc plugin for generating Rust code"
 license = "MIT"
