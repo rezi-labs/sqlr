@@ -6,6 +6,10 @@ description = "sqlc plugin for generating Rust code"
 license = "MIT"
 repository = "https://github.com/rezi-labs/sqlr"
 
+[lib]
+name = "sqlc_gen_rust"
+path = "src/lib.rs"
+
 [[bin]]
 name = "sqlc-gen-rust"
 path = "src/main.rs"

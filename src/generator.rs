@@ -1,7 +1,7 @@
-use crate::types::{GenerateRequest, GenerateResponse, File, PluginOptions, Table, Query, Enum};
 use crate::type_mapping::TypeMapper;
+use crate::types::{Enum, File, GenerateRequest, GenerateResponse, PluginOptions, Query, Table};
 use anyhow::Result;
-use heck::{ToSnakeCase, ToPascalCase};
+use heck::{ToPascalCase, ToSnakeCase};
 
 pub struct RustGenerator {
     request: GenerateRequest,
@@ -12,7 +12,7 @@ impl RustGenerator {
     pub fn new(request: GenerateRequest) -> Self {
         let options = serde_json::from_value(request.plugin_options.clone())
             .unwrap_or_else(|_| PluginOptions::default());
-        
+
         Self { request, options }
     }
 
@@ -22,7 +22,10 @@ impl RustGenerator {
         // Generate models file
         let models_content = self.generate_models()?;
         files.push(File {
-            name: self.options.output_models_file_name.clone()
+            name: self
+                .options
+                .output_models_file_name
+                .clone()
                 .unwrap_or_else(|| "models.rs".to_string()),
             contents: models_content.into_bytes(),
         });
@@ -30,7 +33,10 @@ impl RustGenerator {
         // Generate queries file
         let queries_content = self.generate_queries()?;
         files.push(File {
-            name: self.options.output_db_file_name.clone()
+            name: self
+                .options
+                .output_db_file_name
+                .clone()
                 .unwrap_or_else(|| "queries.rs".to_string()),
             contents: queries_content.into_bytes(),
         });
@@ -47,7 +53,7 @@ impl RustGenerator {
 
     fn generate_models(&self) -> Result<String> {
         let mut output = String::new();
-        
+
         // Add imports
         for import in TypeMapper::get_rust_imports() {
             output.push_str(import);
@@ -78,7 +84,7 @@ impl RustGenerator {
 
         // Add comment if available
         if let Some(comment) = &table.comment {
-            output.push_str(&format!("/// {}\n", comment));
+            output.push_str(&format!("/// {comment}\n"));
         }
 
         // Add derives
@@ -90,25 +96,30 @@ impl RustGenerator {
 
         // Add serde attributes
         if self.options.emit_json_tags.unwrap_or(false) {
-            let case_style = self.options.json_tags_case_style.as_deref().unwrap_or("snake_case");
-            output.push_str(&format!("#[serde(rename_all = \"{}\")]\n", case_style));
+            let case_style = self
+                .options
+                .json_tags_case_style
+                .as_deref()
+                .unwrap_or("snake_case");
+            output.push_str(&format!("#[serde(rename_all = \"{case_style}\")]\n"));
         }
 
-        output.push_str(&format!("pub struct {} {{\n", struct_name));
+        output.push_str(&format!("pub struct {struct_name} {{\n"));
 
         for column in &table.columns {
             if let Some(comment) = &column.comment {
-                output.push_str(&format!("    /// {}\n", comment));
+                output.push_str(&format!("    /// {comment}\n"));
             }
-            
+
             let field_name = column.name.to_snake_case();
-            let field_type = TypeMapper::sql_to_rust_type(&column.r#type, column.not_null, column.is_array);
-            
+            let field_type =
+                TypeMapper::sql_to_rust_type(&column.r#type, column.not_null, column.is_array);
+
             if self.options.emit_json_tags.unwrap_or(false) && field_name != column.name {
                 output.push_str(&format!("    #[serde(rename = \"{}\")]\n", column.name));
             }
-            
-            output.push_str(&format!("    pub {}: {},\n", field_name, field_type));
+
+            output.push_str(&format!("    pub {field_name}: {field_type},\n"));
         }
 
         output.push_str("}\n");
@@ -120,16 +131,16 @@ impl RustGenerator {
         let mut output = String::new();
 
         if let Some(comment) = &enum_def.comment {
-            output.push_str(&format!("/// {}\n", comment));
+            output.push_str(&format!("/// {comment}\n"));
         }
 
         output.push_str("#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]\n");
-        output.push_str(&format!("pub enum {} {{\n", enum_name));
+        output.push_str(&format!("pub enum {enum_name} {{\n"));
 
         for val in &enum_def.vals {
             let variant_name = val.to_pascal_case();
-            output.push_str(&format!("    #[serde(rename = \"{}\")]\n", val));
-            output.push_str(&format!("    {},\n", variant_name));
+            output.push_str(&format!("    #[serde(rename = \"{val}\")]\n"));
+            output.push_str(&format!("    {variant_name},\n"));
         }
 
         output.push_str("}\n");
@@ -138,7 +149,7 @@ impl RustGenerator {
 
     fn generate_queries(&self) -> Result<String> {
         let mut output = String::new();
-        
+
         // Add imports
         for import in TypeMapper::get_rust_imports() {
             output.push_str(import);
@@ -163,7 +174,7 @@ impl RustGenerator {
         // Generate methods for each query
         for query in &self.request.queries {
             output.push_str(&self.generate_query_method(query)?);
-            output.push_str("\n");
+            output.push('\n');
         }
 
         output.push_str("}\n");
@@ -176,21 +187,28 @@ impl RustGenerator {
 
         // Determine return type
         let return_type = self.get_query_return_type(query)?;
-        
+
         // Generate method signature
-        output.push_str(&format!("    pub async fn {}(&self", method_name));
-        
+        output.push_str(&format!("    pub async fn {method_name}(&self"));
+
         // Add parameters
         for param in &query.params {
             let param_name = format!("param_{}", param.number);
-            let param_type = TypeMapper::sql_to_rust_type(&param.column.r#type, param.column.not_null, param.column.is_array);
-            output.push_str(&format!(", {}: {}", param_name, param_type));
+            let param_type = TypeMapper::sql_to_rust_type(
+                &param.column.r#type,
+                param.column.not_null,
+                param.column.is_array,
+            );
+            output.push_str(&format!(", {param_name}: {param_type}"));
         }
-        
-        output.push_str(&format!(") -> Result<{}, SqlxError> {{\n", return_type));
+
+        output.push_str(&format!(") -> Result<{return_type}, SqlxError> {{\n"));
 
         // Generate query execution
-        output.push_str(&format!("        let query = r#\"\n{}\n        \"#;\n\n", query.text));
+        output.push_str(&format!(
+            "        let query = r#\"\n{}\n        \"#;\n\n",
+            query.text
+        ));
 
         match query.cmd.as_str() {
             ":one" => {
@@ -201,7 +219,7 @@ impl RustGenerator {
                 output.push_str("            .fetch_one(&self.pool)\n");
                 output.push_str("            .await?;\n\n");
                 output.push_str(&self.generate_row_mapping(query)?);
-            },
+            }
             ":many" => {
                 output.push_str("        let rows = sqlx::query(query)\n");
                 for (i, _) in query.params.iter().enumerate() {
@@ -211,10 +229,15 @@ impl RustGenerator {
                 output.push_str("            .await?;\n\n");
                 output.push_str("        let mut results = Vec::new();\n");
                 output.push_str("        for row in rows {\n");
-                output.push_str(&format!("            {}", self.generate_row_mapping(query)?.replace("row", "&row").replace("Ok(", "results.push(")));
+                output.push_str(&format!(
+                    "            {}",
+                    self.generate_row_mapping(query)?
+                        .replace("row", "&row")
+                        .replace("Ok(", "results.push(")
+                ));
                 output.push_str("        }\n");
                 output.push_str("        Ok(results)\n");
-            },
+            }
             ":exec" => {
                 output.push_str("        sqlx::query(query)\n");
                 for (i, _) in query.params.iter().enumerate() {
@@ -223,7 +246,7 @@ impl RustGenerator {
                 output.push_str("            .execute(&self.pool)\n");
                 output.push_str("            .await?;\n\n");
                 output.push_str("        Ok(())\n");
-            },
+            }
             _ => {
                 output.push_str("        // Unknown command type\n");
                 output.push_str("        Ok(())\n");
@@ -239,17 +262,25 @@ impl RustGenerator {
             ":one" => {
                 if query.columns.len() == 1 {
                     let col = &query.columns[0];
-                    Ok(TypeMapper::sql_to_rust_type(&col.r#type, col.not_null, col.is_array))
+                    Ok(TypeMapper::sql_to_rust_type(
+                        &col.r#type,
+                        col.not_null,
+                        col.is_array,
+                    ))
                 } else if query.columns.is_empty() {
                     Ok("()".to_string())
                 } else {
                     // For multiple columns, use a tuple type
-                    let types: Vec<String> = query.columns.iter()
-                        .map(|col| TypeMapper::sql_to_rust_type(&col.r#type, col.not_null, col.is_array))
+                    let types: Vec<String> = query
+                        .columns
+                        .iter()
+                        .map(|col| {
+                            TypeMapper::sql_to_rust_type(&col.r#type, col.not_null, col.is_array)
+                        })
                         .collect();
                     Ok(format!("({})", types.join(", ")))
                 }
-            },
+            }
             ":many" => {
                 let inner_type = if query.columns.len() == 1 {
                     let col = &query.columns[0];
@@ -257,13 +288,17 @@ impl RustGenerator {
                 } else if query.columns.is_empty() {
                     "()".to_string()
                 } else {
-                    let types: Vec<String> = query.columns.iter()
-                        .map(|col| TypeMapper::sql_to_rust_type(&col.r#type, col.not_null, col.is_array))
+                    let types: Vec<String> = query
+                        .columns
+                        .iter()
+                        .map(|col| {
+                            TypeMapper::sql_to_rust_type(&col.r#type, col.not_null, col.is_array)
+                        })
                         .collect();
                     format!("({})", types.join(", "))
                 };
-                Ok(format!("Vec<{}>", inner_type))
-            },
+                Ok(format!("Vec<{inner_type}>"))
+            }
             ":exec" => Ok("()".to_string()),
             _ => Ok("()".to_string()),
         }
@@ -273,14 +308,15 @@ impl RustGenerator {
         if query.columns.len() == 1 {
             let col = &query.columns[0];
             let rust_type = TypeMapper::sql_to_rust_type(&col.r#type, col.not_null, col.is_array);
-            Ok(format!("        Ok(row.get::<{}, _>(0))\n", rust_type))
+            Ok(format!("        Ok(row.get::<{rust_type}, _>(0))\n"))
         } else if query.columns.len() > 1 {
             // For multiple columns, create a tuple or struct-like mapping
             let mut mapping = String::new();
             mapping.push_str("        Ok((\n");
             for (i, col) in query.columns.iter().enumerate() {
-                let rust_type = TypeMapper::sql_to_rust_type(&col.r#type, col.not_null, col.is_array);
-                mapping.push_str(&format!("            row.get::<{}, _>({}),\n", rust_type, i));
+                let rust_type =
+                    TypeMapper::sql_to_rust_type(&col.r#type, col.not_null, col.is_array);
+                mapping.push_str(&format!("             row.get::<{rust_type}, _>({i}),\n"));
             }
             mapping.push_str("        ))\n");
             Ok(mapping)
@@ -291,12 +327,12 @@ impl RustGenerator {
 
     fn generate_lib(&self) -> Result<String> {
         let mut output = String::new();
-        
+
         output.push_str("pub mod models;\n");
         output.push_str("pub mod queries;\n\n");
         output.push_str("pub use models::*;\n");
         output.push_str("pub use queries::Database;\n");
-        
+
         Ok(output)
     }
 }

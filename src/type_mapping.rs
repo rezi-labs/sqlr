@@ -3,14 +3,18 @@ use crate::types::Identifier;
 pub struct TypeMapper;
 
 impl TypeMapper {
-    pub fn sql_to_rust_type(sql_type: &Option<Identifier>, not_null: bool, is_array: bool) -> String {
+    pub fn sql_to_rust_type(
+        sql_type: &Option<Identifier>,
+        not_null: bool,
+        is_array: bool,
+    ) -> String {
         let base_type = match sql_type {
             Some(identifier) => Self::map_sql_type(&identifier.name),
             None => "String".to_string(),
         };
 
         let wrapped_type = if is_array {
-            format!("Vec<{}>", base_type)
+            format!("Vec<{base_type}>")
         } else {
             base_type
         };
@@ -18,7 +22,7 @@ impl TypeMapper {
         if not_null {
             wrapped_type
         } else {
-            format!("Option<{}>", wrapped_type)
+            format!("Option<{wrapped_type}>")
         }
     }
 
@@ -26,7 +30,7 @@ impl TypeMapper {
         match sql_type.to_lowercase().as_str() {
             // Integer types
             "int2" | "smallint" => "i16",
-            "int4" | "integer" | "int" => "i32", 
+            "int4" | "integer" | "int" => "i32",
             "int8" | "bigint" => "i64",
             "serial2" | "smallserial" => "i16",
             "serial4" | "serial" => "i32",
@@ -72,11 +76,12 @@ impl TypeMapper {
             _ if sql_type.ends_with("[]") => {
                 let element_type = &sql_type[..sql_type.len() - 2];
                 return format!("Vec<{}>", Self::map_sql_type(element_type));
-            },
+            }
 
             // Unknown type, default to String
             _ => "String",
-        }.to_string()
+        }
+        .to_string()
     }
 
     pub fn get_rust_imports() -> Vec<&'static str> {
