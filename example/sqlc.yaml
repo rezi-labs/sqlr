@@ -1,0 +1,19 @@
+version: '2'
+plugins:
+  - name: rust
+    process:
+      cmd: ../target/release/sqlc-gen-rust
+
+sql:
+  - schema: schema.sql
+    queries: queries.sql
+    engine: postgresql
+    codegen:
+      - plugin: rust
+        out: src/db
+        options:
+          package: db
+          emit_json_tags: true
+          json_tags_case_style: snake_case
+          sql_package: sqlx
+          sql_driver: postgres

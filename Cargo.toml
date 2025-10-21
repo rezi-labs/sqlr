@@ -1,0 +1,24 @@
+[package]
+name = "sqlc-gen-rust"
+version = "0.1.0"
+edition = "2021"
+description = "sqlc plugin for generating Rust code"
+license = "MIT"
+repository = "https://github.com/rezi-labs/sqlr"
+
+[[bin]]
+name = "sqlc-gen-rust"
+path = "src/main.rs"
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+anyhow = "1.0"
+heck = "0.5"
+
+[dev-dependencies]
+tokio = { version = "1", features = ["full"] }
+sqlx = { version = "0.7", features = ["postgres", "runtime-tokio-rustls", "chrono", "uuid"] }
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1.0", features = ["serde"] }
+rust_decimal = "1.0"

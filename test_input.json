@@ -1,0 +1,150 @@
+{
+  "settings": {
+    "version": "2",
+    "engine": "postgresql",
+    "schema": ["schema.sql"],
+    "queries": ["queries.sql"],
+    "codegen": [{
+      "out": "src/db",
+      "plugin": "rust",
+      "options": {
+        "package": "db",
+        "emit_json_tags": true
+      }
+    }]
+  },
+  "catalog": {
+    "comment": null,
+    "default_schema": "public",
+    "name": "test_db",
+    "schemas": [{
+      "comment": null,
+      "name": "public",
+      "tables": [{
+        "rel": {
+          "catalog": "test_db",
+          "schema": "public", 
+          "name": "users"
+        },
+        "columns": [
+          {
+            "name": "id",
+            "not_null": true,
+            "is_array": false,
+            "comment": null,
+            "length": null,
+            "is_named_param": false,
+            "is_func_call": false,
+            "scope": null,
+            "table": null,
+            "table_alias": null,
+            "type": {
+              "catalog": "pg_catalog",
+              "schema": "pg_catalog",
+              "name": "int4"
+            },
+            "is_sqlc_slice": false,
+            "embed_table": null
+          },
+          {
+            "name": "name",
+            "not_null": true,
+            "is_array": false,
+            "comment": null,
+            "length": null,
+            "is_named_param": false,
+            "is_func_call": false,
+            "scope": null,
+            "table": null,
+            "table_alias": null,
+            "type": {
+              "catalog": "pg_catalog",
+              "schema": "pg_catalog",
+              "name": "text"
+            },
+            "is_sqlc_slice": false,
+            "embed_table": null
+          }
+        ],
+        "comment": null
+      }],
+      "enums": [],
+      "composite_types": []
+    }]
+  },
+  "queries": [{
+    "text": "SELECT id, name FROM users WHERE id = $1",
+    "name": "GetUser",
+    "cmd": ":one",
+    "columns": [
+      {
+        "name": "id",
+        "not_null": true,
+        "is_array": false,
+        "comment": null,
+        "length": null,
+        "is_named_param": false,
+        "is_func_call": false,
+        "scope": null,
+        "table": null,
+        "table_alias": null,
+        "type": {
+          "catalog": "pg_catalog",
+          "schema": "pg_catalog", 
+          "name": "int4"
+        },
+        "is_sqlc_slice": false,
+        "embed_table": null
+      },
+      {
+        "name": "name",
+        "not_null": true,
+        "is_array": false,
+        "comment": null,
+        "length": null,
+        "is_named_param": false,
+        "is_func_call": false,
+        "scope": null,
+        "table": null,
+        "table_alias": null,
+        "type": {
+          "catalog": "pg_catalog",
+          "schema": "pg_catalog",
+          "name": "text"
+        },
+        "is_sqlc_slice": false,
+        "embed_table": null
+      }
+    ],
+    "params": [{
+      "number": 1,
+      "column": {
+        "name": "id",
+        "not_null": true,
+        "is_array": false,
+        "comment": null,
+        "length": null,
+        "is_named_param": false,
+        "is_func_call": false,
+        "scope": null,
+        "table": null,
+        "table_alias": null,
+        "type": {
+          "catalog": "pg_catalog",
+          "schema": "pg_catalog",
+          "name": "int4"
+        },
+        "is_sqlc_slice": false,
+        "embed_table": null
+      }
+    }],
+    "comments": [],
+    "filename": "queries.sql"
+  }],
+  "sqlc_version": "1.30.0",
+  "plugin_options": {
+    "package": "db",
+    "emit_json_tags": true
+  },
+  "global_options": null
+}
