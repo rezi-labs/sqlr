@@ -13,24 +13,88 @@ A [sqlc](https://docs.sqlc.dev/) plugin that generates type-safe Rust code from 
 
 ## Installation
 
-Build the plugin from source:
+### Option 1: Install from Source
 
 ```bash
+git clone https://github.com/your-username/sqlc-gen-rust
+cd sqlc-gen-rust
 cargo build --release
 ```
 
 The binary will be available at `target/release/sqlc-gen-rust`.
 
-## Configuration
+### Option 2: Install via Cargo
 
-Add the plugin to your `sqlc.yaml` configuration:
+```bash
+cargo install --path .
+```
+
+This will install the binary to your Cargo bin directory (usually `~/.cargo/bin/sqlc-gen-rust`).
+
+### Option 3: Download Pre-built Binary
+
+Download the latest release from the [GitHub releases page](https://github.com/your-username/sqlc-gen-rust/releases) and place it in your PATH.
+
+## Quick Start Tutorial
+
+### Step 1: Install sqlc
+
+If you don't have sqlc installed, install it first:
+
+```bash
+# On macOS
+brew install sqlc
+
+# On Linux/Windows, download from https://github.com/sqlc-dev/sqlc/releases
+```
+
+### Step 2: Set up your project
+
+Create a new directory for your project:
+
+```bash
+mkdir my-rust-app
+cd my-rust-app
+```
+
+### Step 3: Create your database schema
+
+Create a `schema.sql` file:
+
+```sql
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    email TEXT UNIQUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+```
+
+### Step 4: Write your queries
+
+Create a `queries.sql` file:
+
+```sql
+-- name: GetUser :one
+SELECT id, name, email, created_at FROM users WHERE id = $1;
+
+-- name: ListUsers :many
+SELECT id, name, email, created_at FROM users ORDER BY id;
+
+-- name: CreateUser :one
+INSERT INTO users (name, email) VALUES ($1, $2) RETURNING id, name, email, created_at;
+```
+
+### Step 5: Configure sqlc
+
+Create a `sqlc.yaml` file:
 
 ```yaml
 version: '2'
 plugins:
   - name: rust
     process:
-      cmd: ./target/release/sqlc-gen-rust
+      cmd: sqlc-gen-rust  # or ./target/release/sqlc-gen-rust if built from source
 
 sql:
   - schema: schema.sql
@@ -46,6 +110,55 @@ sql:
           output_models_file_name: models.rs
           output_db_file_name: queries.rs
 ```
+
+### Step 6: Generate Rust code
+
+```bash
+sqlc generate
+```
+
+This will create:
+- `src/db/models.rs` - Struct definitions
+- `src/db/queries.rs` - Query functions  
+- `src/db/lib.rs` - Module exports
+
+### Step 7: Use in your Rust application
+
+Add dependencies to your `Cargo.toml`:
+
+```toml
+[dependencies]
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "chrono", "uuid"] }
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+chrono = { version = "0.4", features = ["serde"] }
+```
+
+Use the generated code:
+
+```rust
+use sqlx::postgres::PgPool;
+use crate::db::Database;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let pool = PgPool::connect("postgresql://user:password@localhost/dbname").await?;
+    let db = Database::new(pool);
+    
+    // Create a user
+    let user = db.create_user("John Doe".to_string(), Some("john@example.com".to_string())).await?;
+    println!("Created user: {:?}", user);
+    
+    // Get the user
+    let user = db.get_user(user.id).await?;
+    println!("Retrieved user: {:?}", user);
+    
+    Ok(())
+}
+```
+
+## Configuration
 
 ## Plugin Options
 
@@ -142,6 +255,108 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
+## Advanced Plugin Integration
+
+### Using with Different Database Engines
+
+While this plugin is optimized for PostgreSQL, you can experiment with other engines:
+
+```yaml
+sql:
+  - schema: schema.sql
+    queries: queries.sql
+    engine: mysql  # or sqlite
+    codegen:
+      - plugin: rust
+        out: src/db
+```
+
+### Multiple Database Configurations
+
+You can generate code for multiple databases:
+
+```yaml
+version: '2'
+plugins:
+  - name: rust
+    process:
+      cmd: sqlc-gen-rust
+
+sql:
+  - schema: users_schema.sql
+    queries: users_queries.sql
+    engine: postgresql
+    codegen:
+      - plugin: rust
+        out: src/db/users
+        options:
+          package: users
+
+  - schema: products_schema.sql
+    queries: products_queries.sql
+    engine: postgresql
+    codegen:
+      - plugin: rust
+        out: src/db/products
+        options:
+          package: products
+```
+
+### Custom Binary Path
+
+If you've installed the binary in a custom location:
+
+```yaml
+plugins:
+  - name: rust
+    process:
+      cmd: /usr/local/bin/sqlc-gen-rust
+      # or use absolute path
+      # cmd: /home/user/.cargo/bin/sqlc-gen-rust
+```
+
+### Integration with Build Systems
+
+#### Using with Cargo Build Scripts
+
+Add to your `build.rs`:
+
+```rust
+use std::process::Command;
+
+fn main() {
+    // Generate code during build
+    let output = Command::new("sqlc")
+        .arg("generate")
+        .output()
+        .expect("Failed to run sqlc generate");
+    
+    if !output.status.success() {
+        panic!("sqlc generate failed: {}", String::from_utf8_lossy(&output.stderr));
+    }
+    
+    println!("cargo:rerun-if-changed=schema.sql");
+    println!("cargo:rerun-if-changed=queries.sql");
+    println!("cargo:rerun-if-changed=sqlc.yaml");
+}
+```
+
+#### Using with Makefile
+
+```makefile
+.PHONY: generate
+generate:
+	sqlc generate
+
+.PHONY: build
+build: generate
+	cargo build
+
+.PHONY: test
+test: generate
+	cargo test
+```
+
 ## Development
 
 To contribute to this plugin:
@@ -149,6 +364,7 @@ To contribute to this plugin:
 1. Clone the repository
 2. Run `cargo test` to run tests
 3. Build with `cargo build --release`
+4. Test with the example: `cd example && sqlc generate`
 
 ## License
 
